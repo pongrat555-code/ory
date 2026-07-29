@@ -80,8 +80,8 @@ vibration_code = """
         const now = Date.now();
         timestamps.push(now);
         
-        // สั่นสั้นๆ 100ms ทุกครั้งที่กด เพื่อส่ง Haptic Feedback บอกว่ารับค่าแล้ว
-        navigator.vibrate(100);
+        // สั่นสั้นๆ 50ms ทุกครั้งที่กด เพื่อส่ง Haptic Feedback บอกว่ารับค่าแล้ว
+        navigator.vibrate(50);
 
         const count = timestamps.length;
         const btn = document.getElementById("mainBtn");
@@ -115,7 +115,7 @@ vibration_code = """
         clearScheduledTimeouts();
 
         // สั่นครั้งที่ 1 ทันที
-        navigator.vibrate(120);
+        navigator.vibrate(50);
 
         // ตั้งเวลาสั่นตามระยะห่างของอีก 9 คลิปที่บันทึกไว้
         let cumulativeTime = 0;
@@ -123,18 +123,18 @@ vibration_code = """
             cumulativeTime += delays[i];
             let t = setTimeout(() => {
                 if (isPlaying) {
-                    navigator.vibrate(120); // สั่นยาว 120ms ทุกโน้ต
+                    navigator.vibrate(50); // สั่นยาว 50ms ทุกโน้ต
                 }
             }, cumulativeTime);
             activeTimeouts.push(t);
         }
 
-        // เมื่อจบครบรอบ 10 ครั้ง ให้เริ่มรอบใหม่ (บวกเว้นระยะท้ายลูปเล็กน้อย 800ms)
+        // เมื่อจบครบรอบ 10 ครั้ง ให้เริ่มรอบใหม่ (บวกเว้นระยะท้ายลูปเล็กน้อย 50ms)
         loopTimeout = setTimeout(() => {
             if (isPlaying) {
                 playRhythmSequence();
             }
-        }, cumulativeTime + 800);
+        }, cumulativeTime + 50);
         activeTimeouts.push(loopTimeout);
     }
 
