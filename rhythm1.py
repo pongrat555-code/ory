@@ -3,8 +3,8 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Rhythm Vibration App", page_icon="📳", layout="centered")
 
-st.title("📳 10-Tap Rhythm Vibration Loop")
-st.write("กดปุ่มให้ครบ 10 ครั้งตามจังหวะที่ต้องการ ระบบจะสั่นวนลูปตามจังหวะนั้นจนกว่าจะสั่งหยุด")
+st.title("📳 Seamless Rhythm Vibration")
+st.write("กดปุ่ม 10 ครั้งเพื่อตั้งความเร็ว ระบบจะนำมาคำนวณเป็นจังหวะที่เท่ากันเป๊ะและสั่นต่อเนื่องแบบไร้รอยต่อ")
 
 vibration_code = """
 <!DOCTYPE html>
@@ -57,12 +57,10 @@ vibration_code = """
 
 <script>
     let timestamps = [];
-    let delays = [];
     let isPlaying = false;
-    let loopTimeout = null;
-    let activeTimeouts = [];
+    let intervalId = null;
 
-    const TOTAL_TAPS = 10; // กำหนดจำนวนครั้งที่ต้องกดเป็น 10 ครั้ง
+    const TOTAL_TAPS = 10;
 
     function handleClick() {
         if (!("vibrate" in navigator)) {
@@ -71,7 +69,7 @@ vibration_code = """
             return;
         }
 
-        // หากกำลังเล่นลูปอยู่ การกดปุ่มจะเป็นการสั่งหยุด
+        // หากกำลังสั่นอยู่ กดอีกครั้งจะเป็นการหยุด
         if (isPlaying) {
             stopRhythm();
             return;
@@ -80,8 +78,8 @@ vibration_code = """
         const now = Date.now();
         timestamps.push(now);
         
-        // สั่นสั้นๆ 50ms ทุกครั้งที่กด เพื่อส่ง Haptic Feedback บอกว่ารับค่าแล้ว
-        navigator.vibrate(50);
+        // Haptic Feedback ตอนกดปุ่ม
+        navigator.vibrate(80);
 
         const count = timestamps.length;
         const btn = document.getElementById("mainBtn");
@@ -91,66 +89,52 @@ vibration_code = """
             btn.innerText = `กดต่อเพื่อจับจังหวะ (${count}/${TOTAL_TAPS})`;
             status.innerText = `บันทึกครั้งที่ ${count} เรียบร้อย...`;
         } else if (count === TOTAL_TAPS) {
-            // คำนวณช่วงเวลาห่าง (Delays) ระหว่างการกดแต่ละครั้ง (ทั้งหมด 9 ช่วง)
-            delays = [];
+            // 1. หาความห่างระหว่างการกดแต่ละครั้ง (8-9 ช่วง)
+            let delays = [];
             for (let i = 0; i < timestamps.length - 1; i++) {
                 delays.push(timestamps[i+1] - timestamps[i]);
             }
 
+            # 2. คำนวณค่าเฉลี่ย เพื่อให้ทุกจังหวะเท่ากันเป๊ะ (Average Interval)
+            const sum = delays.reduce((a, b) => a + b, 0);
+            const avgInterval = Math.round(sum / delays.length);
+
             isPlaying = true;
             btn.innerText = "🛑 กดอีกครั้งเพื่อหยุดสั่น";
             btn.classList.add("stop");
-            status.innerText = "🔄 กำลังสั่นวนลูปตามจังหวะ 10 ครั้งของคุณ...";
+            status.innerText = `🔄 กำลังสั่นแบบไร้รอยต่อ (ทุกๆ ${avgInterval} ms)...`;
             status.style.color = "#00875A";
 
-            // เริ่มเล่นลูปสั่นตามจังหวะ
-            playRhythmSequence();
+            // 3. เริ่มสั่นทันที 1 ครั้ง แล้วสั่นวนไปเรื่อยๆ ด้วย setInterval ตามระยะเวลาเฉลี่ย
+            startSeamlessLoop(avgInterval);
         }
     }
 
-    function playRhythmSequence() {
-        if (!isPlaying) return;
+    function startSeamlessLoop(intervalMs) {
+        // ระยะเวลาสั่นแต่ละครั้ง (กำหนดไม่ให้ยาวเกินช่วงระยะห่างจังหวะ)
+        const vibrateDuration = Math.min(100, Math.floor(intervalMs * 0.4));
 
-        // ล้าง Timeout เดิมที่อาจค้างอยู่
-        clearScheduledTimeouts();
+        // สั่นครั้งแรกทันที
+        navigator.vibrate(vibrateDuration);
 
-        // สั่นครั้งที่ 1 ทันที
-        navigator.vibrate(50);
-
-        // ตั้งเวลาสั่นตามระยะห่างของอีก 9 คลิปที่บันทึกไว้
-        let cumulativeTime = 0;
-        for (let i = 0; i < delays.length; i++) {
-            cumulativeTime += delays[i];
-            let t = setTimeout(() => {
-                if (isPlaying) {
-                    navigator.vibrate(50); // สั่นยาว 50ms ทุกโน้ต
-                }
-            }, cumulativeTime);
-            activeTimeouts.push(t);
-        }
-
-        // เมื่อจบครบรอบ 10 ครั้ง ให้เริ่มรอบใหม่ (บวกเว้นระยะท้ายลูปเล็กน้อย 1200ms)
-        loopTimeout = setTimeout(() => {
+        // วนสั่นต่อเนื่องด้วยจังหวะคงที่เท่ากันตลอดแบบไร้รอยต่อ
+        intervalId = setInterval(() => {
             if (isPlaying) {
-                playRhythmSequence();
+                navigator.vibrate(vibrateDuration);
             }
-        }, cumulativeTime + 1200);
-        activeTimeouts.push(loopTimeout);
-    }
-
-    function clearScheduledTimeouts() {
-        activeTimeouts.forEach(t => clearTimeout(t));
-        activeTimeouts = [];
+        }, intervalMs);
     }
 
     function stopRhythm() {
         isPlaying = false;
-        clearScheduledTimeouts();
+        if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
         navigator.vibrate(0); // สั่งยกเลิกการสั่นทันที
 
-        // รีเซ็ตค่าเพื่อเตรียมจับจังหวะใหม่
+        // รีเซ็ตค่าใหม่
         timestamps = [];
-        delays = [];
 
         const btn = document.getElementById("mainBtn");
         const status = document.getElementById("status");
@@ -168,4 +152,4 @@ vibration_code = """
 
 components.html(vibration_code, height=180)
 
-st.info("**จุดแก้ไข:** เพิ่มจำนวนการบันทึกจังหวะเป็น 10 ครั้ง และปรับปรุงการจัดการ Timeout ให้มีความแม่นยำ ปราศจากการสะสมจังหวะตกค้างเมื่อสั่งหยุดครับ")
+st.info("**การปรับปรุง:** เปลี่ยนระบบมาใช้ `setInterval` ควบคู่กับค่าเฉลี่ยความเร็วจากการกด 10 ครั้ง ทำให้จังหวะที่ได้มีความถี่ **เท่ากันสม่ำเสมอเป๊ะ** และสั่นต่อเนื่องยาวไปได้แบบไม่มีสะดุดไร้รอยต่อครับ")
