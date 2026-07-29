@@ -3,8 +3,8 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Streamlit Seamless Vibration", page_icon="📳", layout="centered")
 
-st.title("📳 Streamlit 10-Tap Vibration")
-st.write("กดปุ่มด้านล่าง 10 ครั้งตามจังหวะที่ต้องการ แอปจะคำนวนและสั่นวนลูปด้วยจังหวะคงที่เท่ากันเป๊ะแบบ Seamless")
+st.title("📳 Song Ryhthm")
+st.write("กดปุ่มด้านล่าง 10 ครั้งตามจังหวะเพลงที่ต้องการ แอปจะคำนวนและสั่นตามจังหวะต่อเนื่องอัตโนมัติ")
 
 # โค้ด HTML/JS แบบสมบูรณ์ ปลดล็อก Permission ให้สั่นได้บน Streamlit iframe
 custom_vibration_component = """
