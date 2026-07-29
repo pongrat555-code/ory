@@ -1,202 +1,205 @@
-import streamlit as st
-import streamlit.components.v1 as components
+import uvicorn
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 
-# ตั้งค่าหน้าตาของเว็บ
-st.set_page_config(
-    page_title="Haptic Tempo Recorder (Vibration)", 
-    page_icon="📳", 
-    layout="centered"
-)
+app = FastAPI()
 
-st.title("📳 Haptic Tempo Recorder")
-st.write("""
-**วิธีใช้งาน:** กดปุ่มด้านล่าง 10 ครั้งตามจังหวะที่ต้องการ 
-ระบบจะคำนวณและสั่นต่อเนื่องเป็นจังหวะที่เท่ากันเป๊ะแบบ **ไร้รอยต่อ (Seamless Loop)** 
-เมื่อต้องการหยุด ให้กดปุ่มเดิมอีกครั้ง
-""")
-
-# โค้ด HTML/JS สำหรับสร้างปุ่มและสั่นต่อเนื่อง
-# แก้ไขปัญหา: การกดครั้งแรกไม่เริ่มจับจังหวะ และระบบ Seamless
-vibration_code_fixed = """
+HTML_CONTENT = """
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>10-Tap Seamless Vibration</title>
     <style>
-        body { margin: 0; padding: 0; }
-        .container {
+        * { box-sizing: border-box; touch-action: manipulation; }
+        body {
+            margin: 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            min-height: 140px; /* เพิ่มพื้นที่ */
+            min-height: 100vh;
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            user-select: none;
+        }
+        .card {
+            background-color: #1e293b;
+            padding: 30px 24px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+        }
+        h2 { margin-top: 0; font-size: 22px; color: #38bdf8; }
+        .counter-display {
+            font-size: 48px;
+            font-weight: 800;
+            color: #f43f5e;
+            margin: 15px 0;
+            text-shadow: 0 0 10px rgba(244, 63, 94, 0.3);
         }
         .vibrate-btn {
-            background-color: #ff4b4b;
+            background-color: #ef4444;
             color: white;
             border: none;
-            padding: 20px 40px;
-            font-size: 22px;
+            padding: 22px 30px;
+            font-size: 20px;
             font-weight: bold;
             border-radius: 50px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 75, 75, 0.4);
-            transition: all 0.2s ease;
-            width: 90%;
-            max-width: 380px;
-            position: relative;
+            width: 100%;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+            transition: transform 0.05s ease, background-color 0.2s ease;
+            outline: none;
         }
         .vibrate-btn:active {
-            transform: scale(0.97);
+            transform: scale(0.93);
+            background-color: #dc2626;
         }
-        .vibrate-btn.stop {
-            background-color: #2e86de;
-            box-shadow: 0 4px 15px rgba(46, 134, 222, 0.4);
+        .vibrate-btn.stop-mode {
+            background-color: #0284c7 !important;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4) !important;
         }
-        .status-text {
+        .status-box {
             margin-top: 20px;
-            color: #444;
-            font-size: 16px;
-            text-align: center;
+            font-size: 15px;
             font-weight: 500;
+            color: #cbd5e1;
+            min-height: 24px;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <button id="mainBtn" class="vibrate-btn">กดครั้งแรกเพื่อเปิดใช้ API (0/10)</button>
-    <p id="status" class="status-text">👉 กดปุ่มด้านบนเพื่อเริ่มบันทึกจังหวะใหม่</p>
+<div class="card">
+    <h2>📳 Seamless Vibration Loop</h2>
+    
+    <!-- ตัวเลขแสดงจำนวนครั้งการนับขนาดใหญ่ -->
+    <div id="counter" class="counter-display">0 / 10</div>
+
+    <button id="vibBtn" class="vibrate-btn">กดเพื่อเริ่มจับจังหวะ</button>
+    <div id="statusBox" class="status-box">พร้อมจับจังหวะการกด</div>
 </div>
 
 <script>
     const TOTAL_TAPS = 10;
-    const btn = document.getElementById("mainBtn");
-    const status = document.getElementById("status");
+    window.tapTimestamps = [];
+    window.isVibratingLoop = false;
+    window.loopIntervalId = null;
 
-    let timestamps = [];
-    let isPlaying = false;
-    let intervalId = null;
-    let avgInterval = 0;
+    const btn = document.getElementById("vibBtn");
+    const statusBox = document.getElementById("statusBox");
+    const counterDisplay = document.getElementById("counter");
 
-    # ✅ ปรับปรุงวิธีการดักจับการกดให้ User-Initiated อย่างสมบูรณ์
-    # เพื่อแก้ปัญหาปุ่มไม่เริ่มจับจังหวะ (User Interaction Blocking)
-    btn.addEventListener('click', handleClick);
+    // ฟังก์ชันประมวลผลเมื่อมีการกดปุ่ม
+    function handleTap(e) {
+        if (e) {
+            e.preventDefault(); // ป้องกัน double click / zoom
+        }
 
-    function handleClick() {
-        if (!("vibrate" in navigator)) {
-            status.innerText = "❌ อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับระบบสั่น";
-            status.style.color = "#DE350B";
+        // 1. ถ้าอยู่ในสถานะกำลังสั่นวนลูป -> กดเพื่อหยุด
+        if (window.isVibratingLoop) {
+            stopVibration();
             return;
         }
 
-        # 1. จัดการ User Interaction (Interaction Gate)
-        # กดครั้งแรกสุดเพื่อเปิดใช้ API และเริ่มบันทึก timestamps[0]
-        if (timestamps.length === 0 && !isPlaying) {
-            startRecording();
-            return; 
-        }
-
-        # 2. หากกำลังสั่นอยู่ กดอีกครั้งจะเป็นการหยุด (Stop state)
-        if (isPlaying) {
-            stopRhythm();
-            return;
-        }
-
-        # 3. จัดการการบันทึกจังหวะตามลำดับ (Tap 2-10)
-        recordTap();
-    }
-
-    function startRecording() {
-        timestamps = [Date.now()];
-        btn.innerText = `กดต่อเพื่อจับจังหวะ (1/${TOTAL_TAPS})`;
-        status.innerText = "🔄 บันทึกครั้งที่ 1 เรียบร้อย... กดต่อทันที!";
-        status.style.color = "#444";
-        # สั่น Feedback สั้นมาก
-        navigator.vibrate(50); 
-    }
-
-    function recordTap() {
+        // 2. บันทึก เวลา ณ ตอนที่กด
         const now = Date.now();
-        timestamps.push(now);
-        navigator.vibrate(80); # สั่น Feedback
+        window.tapTimestamps.push(now);
 
-        const count = timestamps.length;
+        // 3. สั่น Feedback สั้นๆ ตอบสนองการกดทุกครั้ง
+        if ("vibrate" in navigator) {
+            try { navigator.vibrate(50); } catch(err) {}
+        }
 
-        if (count < TOTAL_TAPS) {
-            btn.innerText = `กดต่อเพื่อจับจังหวะ (${count}/${TOTAL_TAPS})`;
-            status.innerText = `บันทึกครั้งที่ ${count} เรียบร้อย...`;
-        } else if (count === TOTAL_TAPS) {
-            # ✅ ค้นหาและบันทึก Seamless avgInterval
-            calculateSeamlessAverage();
-            
-            isPlaying = true;
-            btn.innerText = "🛑 กดเพื่อหยุดสั่น";
-            btn.classList.add("stop");
-            # แสดง status ด้วย interval จริง
-            status.innerText = `🔄 กำลังสั่นต่อเนื่องแบบไร้รอยต่อ (ทุกๆ ${avgInterval} ms)...`;
-            status.style.color = "#00875A";
+        const currentCount = window.tapTimestamps.length;
 
-            # เริ่มต้น Seamless Loop ทันที
-            startSeamlessInterval();
+        // 4. อัปเดตตัวเลขอ่านง่ายบนหน้าจอ
+        counterDisplay.innerText = `${currentCount} / ${TOTAL_TAPS}`;
+
+        if (currentCount < TOTAL_TAPS) {
+            btn.innerText = `กดต่อเพื่อจับจังหวะ`;
+            statusBox.innerText = `บันทึกจังหวะที่ ${currentCount} แล้ว...`;
+            statusBox.style.color = "#cbd5e1";
+        } 
+        else if (currentCount === TOTAL_TAPS) {
+            // 5. บันทึกครบ 10 ครั้ง -> คำนวณหาค่าเฉลี่ย
+            startSeamlessProcess();
         }
     }
 
-    function calculateSeamlessAverage() {
+    function startSeamlessProcess() {
         let delays = [];
-        # เอาส่วนต่างของ 9 ช่วงที่เกิดขึ้นจากการกด 10 ครั้ง
-        for (let i = 0; i < timestamps.length - 1; i++) {
-            delays.push(timestamps[i+1] - timestamps[i]);
+        for (let i = 0; i < window.tapTimestamps.length - 1; i++) {
+            delays.push(window.tapTimestamps[i+1] - window.tapTimestamps[i]);
         }
 
-        # หาค่าเฉลี่ย
         const sum = delays.reduce((a, b) => a + b, 0);
-        # ใช้ค่าเฉลี่ยนี้เป็น Tempo คงที่ตลอดลูป
-        avgInterval = Math.round(sum / delays.length);
-    }
+        const avgInterval = Math.round(sum / delays.length);
 
-    function startSeamlessInterval() {
-        # คำนวณระยะสั่นให้เหมาะสม ไม่เกิน 40% ของ Tempo
+        window.isVibratingLoop = true;
+        btn.innerText = "🛑 กดอีกครั้งเพื่อหยุดสั่น";
+        btn.classList.add("stop-mode");
+        counterDisplay.innerText = "RUNNING";
+        counterDisplay.style.color = "#38bdf8";
+        
+        statusBox.innerText = `🔄 สั่นต่อเนื่องไร้รอยต่อ (จังหวะละ ${avgInterval} ms)`;
+        statusBox.style.color = "#4ade80";
+
+        // เริ่มสั่นวนลูป
         const vibrateDuration = Math.min(100, Math.floor(avgInterval * 0.4));
+        if ("vibrate" in navigator) navigator.vibrate(vibrateDuration);
 
-        # สั่นครั้งแรกทันทีเมื่อกดครบ 10 ครั้ง
-        navigator.vibrate(vibrateDuration);
-
-        # ✅ ใช้ setInterval เพื่อสั่นต่อเนื่องตามจังหวะที่เท่ากันเป๊ะแบบ Seamless
-        intervalId = setInterval(() => {
-            if (isPlaying) {
+        window.loopIntervalId = setInterval(() => {
+            if (window.isVibratingLoop && "vibrate" in navigator) {
                 navigator.vibrate(vibrateDuration);
             }
         }, avgInterval);
     }
 
-    function stopRhythm() {
-        isPlaying = false;
-        # เคลียร์ลูปทันที
-        if (intervalId) {
-            clearInterval(intervalId);
-            intervalId = null;
+    function stopVibration() {
+        window.isVibratingLoop = false;
+        if (window.loopIntervalId) {
+            clearInterval(window.loopIntervalId);
+            window.loopIntervalId = null;
         }
-        # ยกเลิกการสั่นทันที (vibrate(0))
-        navigator.vibrate(0); 
+        if ("vibrate" in navigator) navigator.vibrate(0);
 
-        # รีเซ็ต timestamps เตรียมรับจังหวะใหม่
-        timestamps = [];
+        window.tapTimestamps = []; // ล้างค่าการนับ
 
-        # คืนค่าสถานะเริ่มต้น
-        btn.innerText = `กดเพื่อเริ่มจับจังหวะ (0/${TOTAL_TAPS})`;
-        btn.classList.remove("stop");
-        status.innerText = "⏹️ หยุดสั่นแล้ว! กดใหม่เพื่อเริ่มบันทึกจังหวะใหม่";
-        status.style.color = "#444";
+        btn.innerText = "กดเพื่อเริ่มจับจังหวะ";
+        btn.classList.remove("stop-mode");
+        counterDisplay.innerText = `0 / ${TOTAL_TAPS}`;
+        counterDisplay.style.color = "#f43f5e";
+        
+        statusBox.innerText = "⏹️ หยุดสั่นเรียบร้อย! กดใหม่เพื่อเริ่มนับอีกครั้ง";
+        statusBox.style.color = "#cbd5e1";
     }
+
+    // ผูก Event ทั้ง pointerdown และ click เพื่อให้รองรับทัชสกรีนมือถือทุกเบราว์เซอร์
+    let isProcessing = false;
+    function triggerEvent(e) {
+        if (isProcessing) return;
+        isProcessing = true;
+        handleTap(e);
+        setTimeout(() => { isProcessing = false; }, 50); // ป้องกันการนับซ้ำจากการรันพร้อมกัน
+    }
+
+    btn.addEventListener("pointerdown", triggerEvent);
 </script>
 
 </body>
 </html>
 """
 
-# แสดงผล HTML/JS Component ใน Streamlit
-# ปรับ height เพิ่มเล็กน้อยเพื่อให้แสดงผลปุ่มและข้อความได้ครบถ้วน
-components.html(vibration_code_fixed, height=200)
+@app.get("/", response_class=HTMLResponse)
+def read_root():
+    return HTML_CONTENT
 
-st.info("**การปรับปรุง:** เวอร์ชันนี้แก้ไขปัญหาปุ่มไม่ตอบสนองโดยการบังคับให้มี User Interaction ที่สมบูรณ์ในการเริ่มจับจังหวะ และยังคงรักษาระบบการสั่นแบบ Seamless Loop (ทุกจังหวะเท่ากันสม่ำเสมอและสั่นต่อเนื่องอย่างไร้รอยต่อ) ผ่านค่าเฉลี่ยการกด 10 ครั้งครับ")
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
