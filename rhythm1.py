@@ -129,12 +129,12 @@ vibration_code = """
             activeTimeouts.push(t);
         }
 
-        // เมื่อจบครบรอบ 10 ครั้ง ให้เริ่มรอบใหม่ (บวกเว้นระยะท้ายลูปเล็กน้อย 900ms)
+        // เมื่อจบครบรอบ 10 ครั้ง ให้เริ่มรอบใหม่ (บวกเว้นระยะท้ายลูปเล็กน้อย 950ms)
         loopTimeout = setTimeout(() => {
             if (isPlaying) {
                 playRhythmSequence();
             }
-        }, cumulativeTime + 900);
+        }, cumulativeTime + 950);
         activeTimeouts.push(loopTimeout);
     }
 
