@@ -7,7 +7,7 @@ st.set_page_config(page_title="Vibration App", page_icon="📳", layout="centere
 st.title("📳 Haptic Feedback WebApp")
 st.write("แอปพลิเคชันทดสอบระบบสั่นบนมือถือด้วย Streamlit")
 
-# โค้ด HTML + JavaScript สำหรับสร้างปุ่มและเรียกใช้ Vibration API
+# โค้ด HTML + JavaScript สำหรับสร้างปุ่มและสั่น 1 ครั้งต่อ 1 คลิก
 vibration_code = """
 <!DOCTYPE html>
 <html>
@@ -57,11 +57,10 @@ vibration_code = """
     function triggerVibration() {
         var statusElement = document.getElementById("status");
         
-        // ตรวจสอบว่าเบราว์เซอร์รองรับ Vibration API หรือไม่
         if ("vibrate" in navigator) {
-            // รูปแบบการสั่น: [สั่น 200ms, หยุด 100ms, สั่น 200ms]
-            navigator.vibrate([200, 100, 200]);
-            statusElement.innerText = "⚡ ส่งสัญญาณสั่นแล้ว!";
+            // สั่น 1 ครั้ง ความยาว 200 มิลลิวินาที (0.2 วินาที)
+            navigator.vibrate(200);
+            statusElement.innerText = "⚡ สั่น 1 ครั้งเรียบร้อย!";
             statusElement.style.color = "#00875A";
         } else {
             statusElement.innerText = "❌ อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับระบบสั่น";
@@ -77,4 +76,4 @@ vibration_code = """
 # แสดงผล HTML/JS Component บนหน้า Streamlit
 components.html(vibration_code, height=160)
 
-st.info("**หมายเหตุ:** ระบบสั่นรองรับการทำงานบน **Android** ผ่าน Chrome/Firefox/Edge เป็นหลัก (iOS/iPhone จะไม่รองรับเนื่องจากข้อจำกัดด้านความปลอดภัยของ Safari)")
+st.info("**หมายเหตุ:** รองรับการทำงานบน **Android** ผ่าน Chrome/Firefox/Edge เป็นหลัก (iOS/iPhone ไม่รองรับ Vibration API)")
