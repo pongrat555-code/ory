@@ -64,7 +64,7 @@ custom_vibration_component = """
 </head>
 <body>
 
-<div id="countDisplay" class="counter">0 / 10</div>
+<div id="countDisplay" class="counter">0 / 5</div>
 <button id="vibBtn" class="vibrate-btn">กดเพื่อเริ่มจับจังหวะ</button>
 <div id="statusText" class="status">พร้อมบันทึกจังหวะ (รองรับ Android)</div>
 
