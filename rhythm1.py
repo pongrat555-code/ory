@@ -3,8 +3,8 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Vibration & Flashlight Loop", page_icon="📳", layout="centered")
 
-st.title("📳 Streamlit 10-Tap Vibration & Flashlight")
-st.write("กดปุ่มด้านล่าง 10 ครั้งตามจังหวะ ระบบจะคำนวณและ **สั่นพร้อมเปิดไฟแฟลช** ตามจังหวะเดิมวนลูปแบบ Seamless")
+st.title("📳 เคาะจังหวะ")
+st.write("กดปุ่มด้านล่าง 5 ครั้งตามจังหวะเพลง")
 
 # โค้ด HTML/JS แบบจัดการทั้ง Vibration API และ WebRTC Torch API
 custom_vibration_flash_component = """
@@ -64,12 +64,12 @@ custom_vibration_flash_component = """
 </head>
 <body>
 
-<div id="countDisplay" class="counter">0 / 10</div>
+<div id="countDisplay" class="counter">0 / 5</div>
 <button id="vibBtn" class="vibrate-btn">กดเพื่อเริ่มจับจังหวะ</button>
 <div id="statusText" class="status">พร้อมบันทึกจังหวะ (ต้องอนุญาตสิทธิ์กล้องเพื่อเปิดแฟลช)</div>
 
 <script>
-    const TOTAL_TAPS = 10;
+    const TOTAL_TAPS = 5;
     let timestamps = [];
     let isPlaying = false;
     let intervalId = null;
@@ -168,7 +168,7 @@ custom_vibration_flash_component = """
         btn.classList.add("stop-mode");
         countDisplay.innerText = "RUNNING";
         countDisplay.style.color = "#1f77b4";
-        statusText.innerText = "🔄 สั่น + แฟลช กระพริบไร้รอยต่อ (" + avgInterval + " ms/ครั้ง)";
+        statusText.innerText = "🔄 จังหวะของคุณ (" + avgInterval + " ms/ครั้ง)";
         statusText.style.color = "#00875A";
 
         // ระยะเวลาสั่นและเปิดไฟแฟลชในแต่ละโน้ต
