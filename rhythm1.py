@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Streamlit Seamless Vibration", page_icon="📳", layout="centered")
 
-st.title("เคาะจังหวะ")
+st.title("♫ เคาะจังหวะ")
 st.write("กดปุ่มด้านล่าง 5 ครั้งตามจังหวะเพลง แอปจะสั่นต่อตามจังหวะอัตโนมัติ")
 
 # โค้ด HTML/JS แบบสมบูรณ์ ปลดล็อก Permission ให้สั่นได้บน Streamlit iframe
