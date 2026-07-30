@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="Vibration & Flashlight Loop", page_icon="📳", layout="centered")
 
 st.title("📳 เคาะจังหวะ")
-st.write("กดปุ่มด้านล่าง 5 ครั้งตามจังหวะเพลง")
+st.write("กดปุ่มด้านล่าง 6 ครั้งตามจังหวะเพลง")
 
 # โค้ด HTML/JS แบบจัดการทั้ง Vibration API และ WebRTC Torch API
 custom_vibration_flash_component = """
@@ -64,12 +64,12 @@ custom_vibration_flash_component = """
 </head>
 <body>
 
-<div id="countDisplay" class="counter">0 / 5</div>
+<div id="countDisplay" class="counter">0 / 6</div>
 <button id="vibBtn" class="vibrate-btn">กดเพื่อเริ่มจับจังหวะ</button>
 <div id="statusText" class="status">พร้อมบันทึกจังหวะ (ต้องอนุญาตสิทธิ์กล้องเพื่อเปิดแฟลช)</div>
 
 <script>
-    const TOTAL_TAPS = 5;
+    const TOTAL_TAPS = 6;
     let timestamps = [];
     let isPlaying = false;
     let intervalId = null;
