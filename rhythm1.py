@@ -3,8 +3,8 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Streamlit Seamless Vibration", page_icon="📳", layout="centered")
 
-st.title("📳 Song Rhythm")
-st.write("กดปุ่มด้านล่าง 10 ครั้งตามจังหวะเพลง แอปจะสั่นต่อตามจังหวะอัตโนมัติ")
+st.title("เคาะจังหวะ")
+st.write("กดปุ่มด้านล่าง 5 ครั้งตามจังหวะเพลง แอปจะสั่นต่อตามจังหวะอัตโนมัติ")
 
 # โค้ด HTML/JS แบบสมบูรณ์ ปลดล็อก Permission ให้สั่นได้บน Streamlit iframe
 custom_vibration_component = """
@@ -69,7 +69,7 @@ custom_vibration_component = """
 <div id="statusText" class="status">พร้อมบันทึกจังหวะ (รองรับ Android)</div>
 
 <script>
-    const TOTAL_TAPS = 10;
+    const TOTAL_TAPS = 5;
     let timestamps = [];
     let isPlaying = false;
     let intervalId = null;
