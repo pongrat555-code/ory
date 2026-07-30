@@ -127,7 +127,7 @@ custom_vibration_component = """
         btn.classList.add("stop-mode");
         countDisplay.innerText = "RUNNING";
         countDisplay.style.color = "#1f77b4";
-        statusText.innerText = "🔄 สั่นต่อเนื่องไร้รอยต่อ (" + avgInterval + " ms/ครั้ง)";
+        statusText.innerText = "🔄 จังหวะสั่น (" + avgInterval + " ms/ครั้ง)";
         statusText.style.color = "#00875A";
 
         const vibrateDuration = Math.min(100, Math.floor(avgInterval * 0.4));
