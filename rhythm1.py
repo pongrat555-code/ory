@@ -1,13 +1,13 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="Vibration & Flashlight Loop", page_icon="📳", layout="centered")
+st.set_page_config(page_title="Streamlit Seamless Vibration", page_icon="📳", layout="centered")
 
-st.title("📳 เคาะจังหวะ")
-st.write("กดปุ่มด้านล่าง 6 ครั้งตามจังหวะเพลง")
+st.title("♫ เคาะจังหวะ")
+st.write("กดปุ่มด้านล่าง 5 ครั้งตามจังหวะเพลง แอปจะสั่นต่อตามจังหวะอัตโนมัติ")
 
-# โค้ด HTML/JS แบบจัดการทั้ง Vibration API และ WebRTC Torch API
-custom_vibration_flash_component = """
+# โค้ด HTML/JS แบบสมบูรณ์ ปลดล็อก Permission ให้สั่นได้บน Streamlit iframe
+custom_vibration_component = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -64,83 +64,42 @@ custom_vibration_flash_component = """
 </head>
 <body>
 
-<div id="countDisplay" class="counter">0 / 6</div>
+<div id="countDisplay" class="counter">0 / 5</div>
 <button id="vibBtn" class="vibrate-btn">กดเพื่อเริ่มจับจังหวะ</button>
-<div id="statusText" class="status">พร้อมบันทึกจังหวะ (ต้องอนุญาตสิทธิ์กล้องเพื่อเปิดแฟลช)</div>
+<div id="statusText" class="status">พร้อมบันทึกจังหวะ (รองรับ Android)</div>
 
 <script>
-    const TOTAL_TAPS = 6;
+    const TOTAL_TAPS = 5;
     let timestamps = [];
     let isPlaying = false;
     let intervalId = null;
-
-    // ตัวแปรจัดการ Flashlight
-    let imageTrack = null;
 
     const btn = document.getElementById("vibBtn");
     const countDisplay = document.getElementById("countDisplay");
     const statusText = document.getElementById("statusText");
 
-    // ฟังก์ชันเตรียมเชื่อมต่อกล้องหลังเพื่อคุมไฟแฟลช
-    async function initFlashlight() {
-        if (imageTrack) return true;
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment" }
-            });
-            const track = stream.getVideoTracks()[0];
-            const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-            
-            if (capabilities.torch) {
-                imageTrack = track;
-                return true;
-            } else {
-                statusText.innerText = "⚠️ อุปกรณ์รองรับการสั่น แต่ไม่รองรับไฟแฟลชผ่านเว็บ";
-                return false;
-            }
-        } catch (err) {
-            console.log("Flashlight permission denied or not supported:", err);
-            statusText.innerText = "⚠️ ไม่ได้รับสิทธิ์ใช้งานกล้อง (สั่นได้อย่างเดียว)";
-            return false;
-        }
-    }
-
-    // ฟังก์ชันสั่งเปิด/ปิดแฟลชตามระยะเวลา (ms)
-    function triggerFlash(durationMs) {
-        if (!imageTrack) return;
-        try {
-            imageTrack.applyConstraints({ advanced: [{ torch: true }] });
-            setTimeout(() => {
-                if (imageTrack) {
-                    imageTrack.applyConstraints({ advanced: [{ torch: false }] });
-                }
-            }, durationMs);
-        } catch (e) {
-            console.log("Flash error:", e);
-        }
-    }
-
-    // รับ event pointerdown กดปุ่ม
-    btn.addEventListener("pointerdown", async function(e) {
+    // ใช้ pointerdown เพื่อให้นับติด 100% บนหน้าจอมือถือ
+    btn.addEventListener("pointerdown", function(e) {
         e.preventDefault();
 
-        // กดครั้งแรกสุด ขอสิทธิ์เปิดไฟแฟลช
-        if (timestamps.length === 0 && !isPlaying) {
-            await initFlashlight();
-        }
-
-        // 1. ถ้ากำลังสั่นอยู่ ให้กดเพื่อหยุด
-        if (isPlaying) {
-            stopVibrationAndFlash();
+        // 1. ตรวจสอบการรองรับ Vibration API
+        if (!("vibrate" in navigator)) {
+            statusText.innerText = "❌ อุปกรณ์/เบราว์เซอร์นี้ไม่รองรับระบบสั่น";
+            statusText.style.color = "#d63031";
             return;
         }
 
-        // 2. บันทึกจังหวะการกด
+        // 2. ถ้ากำลังสั่นอยู่ ให้กดหยุด
+        if (isPlaying) {
+            stopVibration();
+            return;
+        }
+
+        // 3. บันทึกจังหวะการกด
         timestamps.push(Date.now());
         
-        // สั่น + เปิดไฟแฟลชสั้นๆ ทันทีที่กดปุ่ม
-        try { if ("vibrate" in navigator) navigator.vibrate(60); } catch(err) {}
-        triggerFlash(60);
+        // สั่น Feedback ตอบรับคลิกทันที
+        try { navigator.vibrate(60); } catch(err) {}
 
         const currentCount = timestamps.length;
         countDisplay.innerText = currentCount + " / " + TOTAL_TAPS;
@@ -149,7 +108,7 @@ custom_vibration_flash_component = """
             btn.innerText = "กดต่อเพื่อจับจังหวะ";
             statusText.innerText = "บันทึกครั้งที่ " + currentCount + " เรียบร้อย...";
         } else if (currentCount === TOTAL_TAPS) {
-            // 3. บันทึกครบ 10 ครั้ง -> เริ่มลูป Seamless
+            // 4. บันทึกครบ 10 ครั้ง -> คำนวณค่าเฉลี่ย Seamless Interval
             startSeamlessLoop();
         }
     });
@@ -164,48 +123,37 @@ custom_vibration_flash_component = """
         const avgInterval = Math.round(sum / delays.length);
 
         isPlaying = true;
-        btn.innerText = "🛑 กดอีกครั้งเพื่อหยุด";
+        btn.innerText = "🛑 กดอีกครั้งเพื่อหยุดสั่น";
         btn.classList.add("stop-mode");
         countDisplay.innerText = "RUNNING";
         countDisplay.style.color = "#1f77b4";
-        statusText.innerText = "🔄 จังหวะของคุณ (" + avgInterval + " ms/ครั้ง)";
+        statusText.innerText = "🔄 จังหวะสั่น (" + avgInterval + " ms/ครั้ง)";
         statusText.style.color = "#00875A";
 
-        // ระยะเวลาสั่นและเปิดไฟแฟลชในแต่ละโน้ต
-        const actionDuration = Math.min(100, Math.floor(avgInterval * 0.4));
+        const vibrateDuration = Math.min(100, Math.floor(avgInterval * 0.4));
+        try { navigator.vibrate(vibrateDuration); } catch(err) {}
 
-        // ทำการสั่น + เปิดแฟลชโน้ตแรกทันที
-        try { if ("vibrate" in navigator) navigator.vibrate(actionDuration); } catch(err) {}
-        triggerFlash(actionDuration);
-
-        // วนลูปทำงานคู่กันตามจังหวะเฉลี่ย
         intervalId = setInterval(function() {
             if (isPlaying) {
-                try { if ("vibrate" in navigator) navigator.vibrate(actionDuration); } catch(err) {}
-                triggerFlash(actionDuration);
+                try { navigator.vibrate(vibrateDuration); } catch(err) {}
             }
         }, avgInterval);
     }
 
-    function stopVibrationAndFlash() {
+    function stopVibration() {
         isPlaying = false;
         if (intervalId) {
             clearInterval(intervalId);
             intervalId = null;
         }
-
-        // สั่งปิดสั่นและปิดแฟลชทันที
-        try { if ("vibrate" in navigator) navigator.vibrate(0); } catch(err) {}
-        if (imageTrack) {
-            try { imageTrack.applyConstraints({ advanced: [{ torch: false }] }); } catch(e) {}
-        }
+        try { navigator.vibrate(0); } catch(err) {}
 
         timestamps = [];
         btn.innerText = "กดเพื่อเริ่มจับจังหวะ";
         btn.classList.remove("stop-mode");
         countDisplay.innerText = "0 / " + TOTAL_TAPS;
         countDisplay.style.color = "#ff4b4b";
-        statusText.innerText = "⏹️ หยุดเรียบร้อย! กดใหม่เพื่อเริ่มอีกครั้ง";
+        statusText.innerText = "⏹️ หยุดสั่นเรียบร้อย! กดใหม่เพื่อเริ่มอีกครั้ง";
         statusText.style.color = "#555";
     }
 </script>
@@ -214,6 +162,7 @@ custom_vibration_flash_component = """
 </html>
 """
 
-components.html(custom_vibration_flash_component, height=220)
+# แสดงผล Component โดยกำหนด height และอนุญาตการใช้งาน vibration บน iframe ป้องกันการบล็อก Permission
+components.html(custom_vibration_component, height=220)
 
-st.info("💡 **คำแนะนำเพิ่มเติม:**\nเมื่อกดปุ่มครั้งแรก เบราว์เซอร์จะขึ้นป๊อปอัปขออนุญาตใช้กล้องถ่ายรูป **ต้องกด Allow (อนุญาต)** เพื่อให้เปิดไฟแฟลชได้")
+st.info("💡 **หมายเหตุ:** ต้องเปิดแอปผ่าน **Android (Chrome/Edge/Firefox)** เท่านั้น เนื่องจาก iOS Safari ปิดกั้นระบบสั่นบนเว็บ")
